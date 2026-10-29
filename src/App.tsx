@@ -96,8 +96,8 @@ export const App: React.FC = () => {
       try {
         localStorage.setItem('imglink_auth_token', tokenParam);
       } catch {}
-      axios.defaults.headers.common['Authorization'] = `Bearer ${tokenParam}`;
       axios
+
         .get<{ user: AuthUser | null; token?: string }>('/api/auth')
         .then((res) => {
           if (res.data.user) {

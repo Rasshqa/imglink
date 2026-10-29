@@ -50,6 +50,7 @@ import {
   loadImageElement,
 } from '../utils/imageConverter';
 import { formatBytes } from '../utils/formatters';
+import { getStoredUser } from '../utils/auth';
 
 interface ImageConverterStudioProps {
   user: AuthUser | null;
@@ -108,8 +109,9 @@ export const ImageConverterStudio: React.FC<ImageConverterStudioProps> = ({
   const [copiedClipboard, setCopiedClipboard] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isPro = Boolean(user?.tier === 'pro' || user?.role === 'admin');
-  const hasReachedFreeCloudLimit = Boolean(user && !isPro && (user.imageCount ?? 0) >= 3);
+  const effectiveUser = user || getStoredUser();
+  const isPro = Boolean(effectiveUser?.tier === 'pro' || effectiveUser?.role === 'admin');
+  const hasReachedFreeCloudLimit = Boolean(effectiveUser && !isPro && (effectiveUser.imageCount ?? 0) >= 3);
 
   const activeItem = queue.find((item) => item.id === selectedId) || queue[0] || null;
   const currentFormatMeta = getFormatMeta(settings.targetFormat);
@@ -476,7 +478,7 @@ export const ImageConverterStudio: React.FC<ImageConverterStudioProps> = ({
   const handleUploadConvertedToCloud = async () => {
     if (!activeItem?.convertedBlob || !activeItem.convertedFileName) return;
 
-    if (!user) {
+    if (!effectiveUser) {
       onOpenAuth();
       return;
     }
@@ -511,19 +513,6 @@ export const ImageConverterStudio: React.FC<ImageConverterStudioProps> = ({
 
       await axios.put(uploadUrl, convertedFile, {
         headers: { 'Content-Type': convertedFile.type },
-        transformRequest: [
-          (data, headers) => {
-            if (headers) {
-              delete headers.Authorization;
-              delete headers.authorization;
-              if (headers.common) {
-                delete headers.common.Authorization;
-                delete headers.common.authorization;
-              }
-            }
-            return data;
-          },
-        ],
       });
 
       setCloudUploadStatus('3/3 GENERATING SHORT URL...');
@@ -732,11 +721,11 @@ export const ImageConverterStudio: React.FC<ImageConverterStudioProps> = ({
             </div>
           </div>
           <button
-            onClick={() => (user ? onOpenProModal() : onOpenAuth())}
+            onClick={() => (effectiveUser ? onOpenProModal() : onOpenAuth())}
             className="px-4 py-2 bg-neo-lime hover:bg-white border-2 border-black font-mono font-black text-xs uppercase text-black shadow-brutal-sm flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 transition-all"
           >
             <Crown className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>{user ? 'Unlock Batch Pro' : 'Sign In for Batch Pro'}</span>
+            <span>{effectiveUser ? 'Unlock Batch Pro' : 'Sign In for Batch Pro'}</span>
           </button>
         </div>
       )}
@@ -1037,7 +1026,7 @@ export const ImageConverterStudio: React.FC<ImageConverterStudioProps> = ({
                   {!isPro ? (
                     <button
                       type="button"
-                      onClick={() => (user ? onOpenProModal() : onOpenAuth())}
+                      onClick={() => (effectiveUser ? onOpenProModal() : onOpenAuth())}
                       className="px-2 py-0.5 bg-neo-yellow hover:bg-neo-lime border border-black font-mono font-black text-[10px] uppercase text-black flex items-center gap-1"
                     >
                       <Crown className="w-3 h-3 stroke-[2.5] flex-shrink-0" />

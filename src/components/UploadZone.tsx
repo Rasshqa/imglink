@@ -22,6 +22,7 @@ import type {
   AuthUser,
   SupportedOutputFormat,
 } from '../types';
+import { getStoredUser } from '../utils/auth';
 import { formatBytes } from '../utils/formatters';
 import {
   ACCEPT_ALL_IMAGE_FORMATS,
@@ -65,9 +66,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
   const [preQuality, setPreQuality] = useState<number>(85);
   const [preMaxWidth, setPreMaxWidth] = useState<number | null>(null);
 
-  const isPro = Boolean(user?.tier === 'pro' || user?.role === 'admin');
-  const isFreeTier = Boolean(user && !isPro);
-  const hasReachedFreeLimit = Boolean(isFreeTier && (user?.imageCount ?? 0) >= 3);
+  const effectiveUser = user || getStoredUser();
+  const isPro = Boolean(effectiveUser?.tier === 'pro' || effectiveUser?.role === 'admin');
+  const isFreeTier = Boolean(effectiveUser && !isPro);
+  const hasReachedFreeLimit = Boolean(isFreeTier && (effectiveUser?.imageCount ?? 0) >= 3);
 
   const validateFile = (file: File): string | null => {
     if (!isSupportedImageFile(file)) {
@@ -87,7 +89,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
     async (rawFile: File) => {
       setValidationError(null);
 
-      if (!user) {
+      if (!effectiveUser) {
         onOpenAuth();
         return;
       }
@@ -176,19 +178,6 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
           headers: {
             'Content-Type': finalMimeType,
           },
-          transformRequest: [
-            (data, headers) => {
-              if (headers) {
-                delete headers.Authorization;
-                delete headers.authorization;
-                if (headers.common) {
-                  delete headers.common.Authorization;
-                  delete headers.common.authorization;
-                }
-              }
-              return data;
-            },
-          ],
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const uploadFraction = progressEvent.loaded / progressEvent.total;
@@ -366,7 +355,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
         accept={ACCEPT_ALL_IMAGE_FORMATS}
         className="hidden"
         onChange={handleFileSelect}
-        disabled={isUploading || !user || hasReachedFreeLimit}
+        disabled={isUploading || !effectiveUser || hasReachedFreeLimit}
       />
 
       {/* Validation / Error Banner */}
@@ -407,7 +396,7 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
       )}
 
       {/* Auth Gate Banner (If not logged in) */}
-      {!user ? (
+      {!effectiveUser ? (
         <div className="p-5 sm:p-8 md:p-10 bg-white border-[4px] border-black shadow-brutal-xl text-center space-y-5 sm:space-y-6 relative overflow-hidden">
           <div className="inline-block p-3 sm:p-4 bg-neo-yellow border-[3px] border-black shadow-brutal -rotate-2 hover:rotate-2 transition-transform">
             <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-black stroke-[2.5]" />
@@ -631,10 +620,10 @@ export const UploadZone: React.FC<UploadZoneProps> = ({
                 <span className="w-3 h-3 bg-neo-lime border-2 border-black rounded-full inline-block" />
                 <span className="ml-1 sm:ml-2 tracking-wider hidden xs:inline">
                   IMGLINK CLOUD ·{' '}
-                  {isPro ? 'PRO TIER' : `FREE TIER (${user.imageCount ?? 0}/3 USED)`}
+                  {isPro ? 'PRO TIER' : `FREE TIER (${effectiveUser?.imageCount ?? 0}/3 USED)`}
                 </span>
                 <span className="ml-1 tracking-wider xs:hidden">
-                  {isPro ? 'PRO' : `${user.imageCount ?? 0}/3 USED`}
+                  {isPro ? 'PRO' : `${effectiveUser?.imageCount ?? 0}/3 USED`}
                 </span>
               </div>
               <span className="px-2 py-0.5 bg-black text-white text-[10px] tracking-widest font-black">

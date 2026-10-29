@@ -319,7 +319,11 @@ export function applyCorsHeaders(req: any, res: any): void {
       const parsedOrigin = new URL(origin);
       const parsedApp = new URL(appUrl);
 
-      const isSameHost = parsedOrigin.host === parsedApp.host;
+      const isDomainMatch =
+        parsedOrigin.hostname === 'imglink.web.id' ||
+        parsedOrigin.hostname.endsWith('.imglink.web.id') ||
+        parsedOrigin.hostname === parsedApp.hostname ||
+        parsedOrigin.hostname.endsWith(`.${parsedApp.hostname}`);
       const isLocalhost =
         parsedOrigin.hostname === 'localhost' ||
         parsedOrigin.hostname === '127.0.0.1';
@@ -327,7 +331,7 @@ export function applyCorsHeaders(req: any, res: any): void {
         parsedOrigin.hostname.endsWith('.vercel.app') &&
         (parsedApp.hostname.includes('imglink') || parsedOrigin.hostname.includes('imglink'));
 
-      if (isSameHost || isLocalhost || isVercelPreview) {
+      if (isDomainMatch || isLocalhost || isVercelPreview) {
         allowedOrigin = origin;
       }
     } catch {
